@@ -7,6 +7,22 @@ from textblob import TextBlob, Word
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.probability import FreqDist
 
+import pkg_resources
+from symspellpy import SymSpell
+
+
+sym_spell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
+dictionary_path = pkg_resources.resource_filename(
+    "symspellpy", "frequency_dictionary_en_82_765.txt"
+)
+bigram_path = pkg_resources.resource_filename(
+    "symspellpy", "frequency_bigramdictionary_en_243_342.txt"
+)
+# term_index is the column of the term and count_index is the
+# column of the term frequency
+sym_spell.load_dictionary(dictionary_path, term_index=0, count_index=1)
+sym_spell.load_bigram_dictionary(bigram_path, term_index=0, count_index=2)
+
 
 # run only one initial spell check on dataset since it's very slow
 
@@ -20,12 +36,17 @@ def clean_text_1(text):
 
 count = 0
 def spell_check(text):
-	global count
-	count += 1
-	print(text)
-	text = TextBlob(text).correct()
-	print(text)
-	print(count)
+	# global count
+	# count += 1
+	# print(text)
+	# text = TextBlob(text).correct()
+	# print(text)
+	# print(count)
+	suggestions = sym_spell.lookup_compound(text, max_edit_distance=2)
+# display suggestion term, edit distance, and term frequency
+	for suggestion in suggestions:
+		print(suggestion)
+	print("Original:", text)
 	
 	
 pd.options.display.max_colwidth = 100
@@ -34,7 +55,7 @@ dataset = pd.read_csv('Restaurant_Reviews.tsv', delimiter = '\t')
 print(dataset["Review"][:20])
 
 data_clean = pd.DataFrame(dataset["Review"].apply(clean_text_1))
-# data_clean = pd.DataFrame(dataset["Review"].apply(spell_check))
+data_clean = pd.DataFrame(data_clean["Review"].apply(spell_check))
 print("\n\n", data_clean["Review"][:20])
 
 clean_text = []
